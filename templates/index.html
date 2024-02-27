@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shadows Among Scholars: The Game</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+   
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+        #titleScreen {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            text-align: center;
+            font-size: 2em;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold; /* Make font bold */
+        }
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 30px;
+            cursor: pointer;
+        }
+        #map {
+            height: 80vh;
+            width: calc(100% - 250px);
+            float: right;
+            opacity: 0; /* Start invisible */
+            transition: opacity 2s ease; /* Smooth transition for the fade-in effect */
+        }
+        #sideColumn {
+            width: 250px;
+            height: 80vh;
+            float: left;
+            background-color: #737171; /* Side panel color */
+            padding: 10px;
+            box-sizing: border-box;
+            opacity: 0;
+            transition: opacity 2s ease;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #navigationTitle {
+            font-weight: bold;
+            font-size: 30px;
+            text-decoration: underline;
+            margin-top: 5px;
+            margin-bottom: 20px; /* Add some space below the title */
+            text-align: center; /* Center the title */
+        }
+        /* Style for buttons */
+        #sideColumn button {
+            display: block; /* Make buttons block-level for vertical stacking */
+            width: 100%; /* Full width of the container */
+            margin-bottom: 10px; /* Space between buttons */
+            padding: 10px; /* Larger padding for bigger buttons */
+            font-size: 1.2em; /* Larger font size for visibility */
+            cursor: pointer; /* Change cursor on hover */
+            text-align: center; /* Center text */
+            font-family: Consolas, monospace; /* Monospace font for uniformity */
+            font-size: 1em; /* Adjust based on preference */
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s; /* Smooth transition for the hover effect */
+        }
+        #sideColumn button:hover {
+            background-color: transparent; /* Background becomes transparent */
+            color: #ffffff; /* Text color changes to black */
+            border-color: rgb(255, 255, 255); /* Border color changes to black */
+        }  
+        #inventory {
+            width: 250px; /* Match the width of the side panel */
+            height: 20vh; /* Adjust as needed */
+            background-color: #cfcdcd; /* Inventory color */
+            padding: 10px;
+            box-sizing: border-box;
+            float: left;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+        #details {
+            height: 20vh; /* Adjust as needed */
+            width: calc(100% - 250px); /* Adjust based on the inventory width */
+            background-color: #e0dcdc; /* Details color */
+            padding: 10px;
+            box-sizing: border-box;
+            float: right;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+    </style>
+</head>
+<body>
+
+
+<div id="titleScreen">
+    <h3>Shadows Among Scholars: The Peculiar Case of Bruce Gittings</h3>
+    <span class="close" onclick="closeTitleScreen()">X</span>
+</div>
+
+
+<div id="sideColumn">
+    <!-- Functionality buttons will be placed here -->
+    <h4 id="navigationTitle">Navigation</h4>
+    <!-- Example buttons -->
+    <button id="updateLocation">UPDATE LOCATION</button>
+    <button>ENTER NEW AREA</button>
+    <button>COLLECT ITEM</button>
+    <button>MOVE</button>
+    <button>LOG INTERACTION</button>
+    <!-- Add more buttons as needed -->
+</div>
+
+
+<div id="map"></div>
+
+
+<div id="inventory">
+    <!-- Inventory content will be placed here -->
+</div>
+
+
+<div id="details">
+    <!-- Details of GameElements will be displayed here -->
+</div>
+
+
+<script>
+    var map;
+    // Initialize the map on page load but keep it invisible initially
+    document.addEventListener('DOMContentLoaded', function() {
+        map = L.map('map').setView([55.944, -3.187], 13);
+
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+
+        L.marker([55.944, -3.187]).addTo(map)
+            .bindPopup('Starting Location')
+            .openPopup();
+       
+    });
+        // /dev/asdmmurder
+        function loadGeoJson() {
+            fetch('/geojson')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                });
+        }
+
+        // Add event listener to the button
+        document.getElementById('updateLocation').addEventListener('click', loadGeoJson);
+    // Function to close the title screen and fade in the map, side column, inventory, and details
+    function closeTitleScreen() {
+        document.getElementById('titleScreen').style.display = 'none';
+        document.getElementById('map').style.opacity = 1; // Trigger the fade-in for the map
+        document.getElementById('sideColumn').style.opacity = 1; // Trigger the fade-in for the side column
+        document.getElementById('inventory').style.opacity = 1; // Trigger the fade-in for the inventory
+        document.getElementById('details').style.opacity = 1; // Trigger the fade-in for the details
+    }
+</script>
+
+
+</body>
+</html>
+
