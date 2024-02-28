@@ -6,8 +6,14 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+#Reading the Credential
+app.config.from_object('config')
+
 def fetch_geojson():
-    conn = cx_Oracle.connect(dsn="geoslearn", user="s2606314", password="fudge")
+    conn = cx_Oracle.connect(dsn=app.config['DATABASE_DSN'],
+                         user=app.config['DATABASE_USER'],
+                         password=app.config['DATABASE_PASSWORD'])
+
     c = conn.cursor()
 
     # Execute your query
