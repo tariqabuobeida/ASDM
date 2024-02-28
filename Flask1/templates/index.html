@@ -110,21 +110,27 @@
 <body>
 
 
-<div id="titleScreen">
+<!-- <div id="titleScreen">
     <h3>Shadows Among Scholars: The Peculiar Case of Bruce Gittings</h3>
     <span class="close" onclick="closeTitleScreen()">X</span>
-</div>
+</div> -->
 
 
 <div id="sideColumn">
     <!-- Functionality buttons will be placed here -->
     <h4 id="navigationTitle">Navigation</h4>
     <!-- Example buttons -->
-    <button id="updateLocation">UPDATE LOCATION</button>
-    <button>ENTER NEW AREA</button>
+    <button id="updateLocationButton">UPDATE LOCATION</button>
+    <button id="loadGeoJson1">ENTER NEW AREA</button>
     <button>COLLECT ITEM</button>
     <button>MOVE</button>
     <button>LOG INTERACTION</button>
+    <button id="NearestPolygon">NEAREST POLYGON</button>
+    <button id="PolygonDistance">POLYGON DISTANCE</button>
+    <button id="LoadGeomtries">LOAD ALL GEOMETRIES</button>
+    <button id="FindItem">FIND ITEM</button>
+    <button id="Within300m">300m SEARCH</button>
+    <button id="PolygonArea">CALCULATE AREA</button>
     <!-- Add more buttons as needed -->
 </div>
 
@@ -145,21 +151,53 @@
 <script>
     var map;
     // Initialize the map on page load but keep it invisible initially
-    document.addEventListener('DOMContentLoaded', function() {
-        map = L.map('map').setView([55.944, -3.187], 13);
+    // document.addEventListener('DOMContentLoaded', function() {
+        map = L.map('map').setView([55.941, -3.191], 13);
 
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.{ext}', {
+            attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://www.stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	        ext: 'png'
         }).addTo(map);
 
+            // Initialize a draggable marker and add it to the map
+            var myCustomIcon = L.icon({
+                iconUrl: '/static/data/icon.png',  // Update the path to your PNG image
+                iconSize: [30, 40], // Size of the icon, adjust according to your image dimensions
+                // iconAnchor: [12, 95], // Point of the icon which will correspond to marker's location
+                // popupAnchor: [-3, -76] // Point from which the popup should open relative to the iconAnchor
+            });
+        var marker = L.marker([55.944, -3.187], {
+            draggable: 'true',
+            icon: myCustomIcon // Make the marker draggable
+        }).addTo(map);
+        
+        var geojsonFilePath = '/static/data/boundary.geojson';
+        fetch(geojsonFilePath)
+        .then(response => response.json())
+        .then(data => {
+            L.geoJson(data, {
+                style: function(feature) {
+                    return {
+                        color: '#000', // Line color, change as needed
+                        weight: 2, // Line weight in points
+                        fillOpacity: 0 // No fill
+                    };
+                }
+            }).addTo(map);
+        });
 
-        L.marker([55.944, -3.187]).addTo(map)
-            .bindPopup('Starting Location')
-            .openPopup();
-       
-    });
-        // ignore this /dev/asdmmurder
+        let lastlat, lastlng;   //store last position
+        marker.on('dragend', function(e) {
+            
+            var newPosition = marker.getLatLng(); // Get the new position of the marker
+            lastlat = newPosition.lat;
+            lastlng = newPosition.lng;
+            // Optional: Perform actions after dropping the marker, such as updating a form field or making a server request
+        }); 
+        
+    // });
+        // Enter New Area Funtion
         function loadGeoJson() {
             fetch('/geojson')
                 .then(response => response.json())
@@ -173,17 +211,94 @@
                     }).addTo(map);
                 });
         }
+        // Loadallgeojson
+        function Loadallgeometries() {
+            fetch('/all_geometries')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                });
+        }
 
-        // Add event listener to the button
-        document.getElementById('updateLocation').addEventListener('click', loadGeoJson);
+        // Nearest Polygon Distance
+        function fetchAndPlotNearestPolygon() {
+            fetch('/nearest_polygon')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                });
+        }
+        
+                // Nearest Polygon Distance
+            function FetchPolygonDistance() {
+            fetch('/polygon_distance')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                });
+            }
+
+
+    // Add event listener to the button
+    document.getElementById('loadGeoJson1').addEventListener('click', loadGeoJson) 
+    document.getElementById('LoadGeomtries').addEventListener('click', Loadallgeometries)
+    document.getElementById('NearestPolygon').addEventListener('click', fetchAndPlotNearestPolygon) 
+    document.getElementById('PolygonDistance').addEventListener('click', FetchPolygonDistance) 
+
+    document.getElementById('updateLocationButton').addEventListener('click', function() {
+    if (typeof lastlat === 'undefined' || typeof lastlng === 'undefined') {
+        console.error('Please drag the marker to a new location before updating.');
+        return;
+    }
+
+    fetch('/update-location', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            player_id: 2, // Assuming the player_id is known; adjust as necessary
+            lat: lastlat,
+            lon: lastlng
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Location updated successfully:', data);
+        // Optionally reset lastLat and lastLng to undefined after successful update
+        lastLat = undefined;
+        lastLng = undefined;
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+});
     // Function to close the title screen and fade in the map, side column, inventory, and details
-    function closeTitleScreen() {
-        document.getElementById('titleScreen').style.display = 'none';
+    // function closeTitleScreen() {
+        // document.getElementById('titleScreen').style.display = 'none';
         document.getElementById('map').style.opacity = 1; // Trigger the fade-in for the map
         document.getElementById('sideColumn').style.opacity = 1; // Trigger the fade-in for the side column
         document.getElementById('inventory').style.opacity = 1; // Trigger the fade-in for the inventory
         document.getElementById('details').style.opacity = 1; // Trigger the fade-in for the details
-    }
+    // }
 </script>
 
 
