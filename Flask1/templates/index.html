@@ -42,7 +42,7 @@
             cursor: pointer;
         }
         #map {
-            height: 80vh;
+            height: 100vh;
             width: calc(100% - 250px);
             float: right;
             opacity: 0; /* Start invisible */
@@ -95,16 +95,18 @@
             opacity: 0;
             transition: opacity 2s ease;
         }
+    /*
         #details {
-            height: 20vh; /* Adjust as needed */
-            width: calc(100% - 250px); /* Adjust based on the inventory width */
-            background-color: #e0dcdc; /* Details color */
+            height: 20vh; 
+            width: calc(100% - 250px); 
+            background-color: #e0dcdc; 
             padding: 10px;
             box-sizing: border-box;
             float: right;
             opacity: 0;
             transition: opacity 2s ease;
         }
+    */
     </style>
 </head>
 <body>
@@ -121,7 +123,7 @@
     <h4 id="navigationTitle">Navigation</h4>
     <!-- Example buttons -->
     <button id="updateLocationButton">UPDATE LOCATION</button>
-    <button id="loadGeoJson1">ENTER NEW AREA</button>
+    <button id="EnterNewArea">ENTER NEW AREA</button>
     <button>COLLECT ITEM</button>
     <button>MOVE</button>
     <button>LOG INTERACTION</button>
@@ -131,6 +133,9 @@
     <button id="FindItem">FIND ITEM</button>
     <button id="Within300m">300m SEARCH</button>
     <button id="PolygonArea">CALCULATE AREA</button>
+    <button id="clearMapBtn">Clear Map</button>
+    <button id="BufferSuspects">Buffer Suspects 40m</button>
+
     <!-- Add more buttons as needed -->
 </div>
 
@@ -150,42 +155,48 @@
 
 <script>
     var map;
+
     // Initialize the map on page load but keep it invisible initially
     // document.addEventListener('DOMContentLoaded', function() {
-        map = L.map('map').setView([55.941, -3.191], 13);
+        map = L.map('map').setView([55.91410,-3.26983], 12);
 
 
         L.tileLayer('https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.{ext}', {
             attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://www.stamen.com/" target="_blank">Stamen Design</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 	        ext: 'png'
         }).addTo(map);
-
+        
+        var dynamicLayers = L.layerGroup().addTo(map); // Initialise the Dynamic Layer group
             // Initialize a draggable marker and add it to the map
-            var myCustomIcon = L.icon({
+        var myCustomIcon = L.icon({
                 iconUrl: '/static/data/icon.png',  // Update the path to your PNG image
                 iconSize: [30, 40], // Size of the icon, adjust according to your image dimensions
                 // iconAnchor: [12, 95], // Point of the icon which will correspond to marker's location
                 // popupAnchor: [-3, -76] // Point from which the popup should open relative to the iconAnchor
-            });
+        });
         var marker = L.marker([55.944, -3.187], {
             draggable: 'true',
             icon: myCustomIcon // Make the marker draggable
         }).addTo(map);
         
         var geojsonFilePath = '/static/data/boundary.geojson';
+        var boundaryLayer; // Add this global variable
+
+        // Then, modify the fetch call for the boundary layer
         fetch(geojsonFilePath)
         .then(response => response.json())
         .then(data => {
-            L.geoJson(data, {
+            boundaryLayer = L.geoJson(data, {
                 style: function(feature) {
                     return {
-                        color: '#000', // Line color, change as needed
-                        weight: 2, // Line weight in points
-                        fillOpacity: 0 // No fill
+                        color: '#00008B',
+                        weight: 3,
+                        fillOpacity: 0
                     };
                 }
             }).addTo(map);
         });
+
 
         let lastlat, lastlng;   //store last position
         marker.on('dragend', function(e) {
@@ -198,8 +209,8 @@
         
     // });
         // Enter New Area Funtion
-        function loadGeoJson() {
-            fetch('/geojson')
+        function FetchEnterNewArea() {
+            fetch('/enter_new_area')
                 .then(response => response.json())
                 .then(data => {
                     L.geoJson(data, {
@@ -208,7 +219,7 @@
                                 layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
                             }
                         }
-                    }).addTo(map);
+                    }).addTo(dynamicLayers);
                 });
         }
         // Loadallgeojson
@@ -222,7 +233,7 @@
                                 layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
                             }
                         }
-                    }).addTo(map);
+                    }).addTo(dynamicLayers);
                 });
         }
 
@@ -237,7 +248,7 @@
                                 layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
                             }
                         }
-                    }).addTo(map);
+                    }).addTo(dynamicLayers);
                 });
         }
         
@@ -252,7 +263,7 @@
                                 layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
                             }
                         }
-                    }).addTo(map);
+                    }).addTo(dynamicLayers);
                 });
         }
 
@@ -267,7 +278,7 @@
                                 layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
                             }
                         }
-                    }).addTo(map);
+                    }).addTo(dynamicLayers);
                 });
         }
         //300m Buffer
@@ -281,18 +292,33 @@
                                 layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
                             }
                         }
-                    }).addTo(map);
+                    }).addTo(dynamicLayers);
                 });
         }
 
+            //Suspect 40m Buffer
+            function Fetch40msusbuf() {
+            fetch('/40m_susbuf')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(dynamicLayers);
+                });
+        }
 
     // Add event listener to the button
-    document.getElementById('loadGeoJson1').addEventListener('click', loadGeoJson) 
+    document.getElementById('EnterNewArea').addEventListener('click', FetchEnterNewArea) 
     document.getElementById('LoadGeomtries').addEventListener('click', Loadallgeometries)
     document.getElementById('NearestPolygon').addEventListener('click', fetchAndPlotNearestPolygon) 
     document.getElementById('PolygonDistance').addEventListener('click', FetchPolygonDistance) 
     document.getElementById('PolygonArea').addEventListener('click', FetchPolygonArea) 
-    document.getElementById('Within300m').addEventListener('click', Fetch300mSearch) 
+    document.getElementById('Within300m').addEventListener('click', Fetch300mSearch)
+    document.getElementById('BufferSuspects').addEventListener('click', Fetch40msusbuf) 
 
     document.getElementById('updateLocationButton').addEventListener('click', function() {
     if (typeof lastlat === 'undefined' || typeof lastlng === 'undefined') {
@@ -322,6 +348,13 @@
         console.error('Error:', error);
     });
 });
+        
+        document.getElementById('clearMapBtn').addEventListener('click', function() {
+            dynamicLayers.clearLayers(); // This clears all layers in the group
+
+        });
+
+
     // Function to close the title screen and fade in the map, side column, inventory, and details
     // function closeTitleScreen() {
         // document.getElementById('titleScreen').style.display = 'none';
@@ -335,4 +368,3 @@
 
 </body>
 </html>
-
