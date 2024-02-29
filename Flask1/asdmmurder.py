@@ -8,6 +8,7 @@ CORS(app)
 #Reading the Credential
 app.config.from_object('config')
 
+## Entre New Area
 def fetch_geojson():
     conn = cx_Oracle.connect(dsn=app.config['DATABASE_DSN'],
                          user=app.config['DATABASE_USER'],
@@ -72,9 +73,10 @@ WHERE e.geometry_id IN (
 def geojson():
     geojson_data = fetch_geojson()
     return Response(json.dumps(geojson_data), mimetype='application/json')
+## Enter New Area
 
-#######
 
+##all geometries
 def all_geometries():
     conn = cx_Oracle.connect(dsn=app.config['DATABASE_DSN'],
                          user=app.config['DATABASE_USER'],
@@ -117,10 +119,9 @@ def all_geometries():
 def all_geojson():
     geojson_data = all_geometries()
     return Response(json.dumps(geojson_data), mimetype='application/json')
+##all geometries
 
-#######
-
-
+## nearest polygon
 def fetch_nearest_polygon():
     conn = cx_Oracle.connect(dsn=app.config['DATABASE_DSN'],
                              user=app.config['DATABASE_USER'],
@@ -173,7 +174,7 @@ def fetch_nearest_polygon():
 def nearest_polygon():
     geojson_data = fetch_nearest_polygon()
     return Response(json.dumps(geojson_data), mimetype='application/json')
-
+## nearest polygon
 
 ### polygon Distance
 def fetch_polygon_distance():
@@ -227,10 +228,106 @@ def fetch_polygon_distance():
 def polygon_distance():
     geojson_data = fetch_polygon_distance()
     return Response(json.dumps(geojson_data), mimetype='application/json')
-
-
 ### polygon Distance
 
+## polygon area
+def fetch_polygon_area():
+    conn = cx_Oracle.connect(dsn=app.config['DATABASE_DSN'],
+                             user=app.config['DATABASE_USER'],
+                             password=app.config['DATABASE_PASSWORD'])
+    cursor = conn.cursor()
+
+    # Execute your query
+    cursor.execute(""" 
+                   SELECT SDO_UTIL.TO_GEOJSON(g.location), e.element_id, e.name, 
+                    ROUND(SDO_GEOM.SDO_AREA(g.location, 0.005), 2) AS area
+                    FROM GAME_ELEMENTS e
+                    JOIN Geometries g ON e.geometry_id = g.geometry_id
+                    WHERE e.type = 'Area'
+    """)
+
+    # Construct GeoJSON features including the DESCRIPTION
+    geojson_features = []
+    for row in cursor:
+        geojson, element_id, name, area = row
+        feature = {
+            'type': 'Feature',
+            'geometry': json.loads(geojson.read() if geojson else '{}'),
+            'properties': {
+                'Element ID': element_id,
+                'Name': name,
+                'Area': area
+            }
+        }
+        geojson_features.append(feature)
+
+    geojson_collection = {
+        'type': 'FeatureCollection',
+        'features': geojson_features
+    }
+
+    cursor.close()
+    conn.close()
+
+    return geojson_collection
+@app.route('/polygon_area')
+def polygon_area():
+    geojson_data = fetch_polygon_area()
+    return Response(json.dumps(geojson_data), mimetype='application/json')
+## polygon area
+
+##300m Buffer
+def fetch_300m_search():
+    conn = cx_Oracle.connect(dsn=app.config['DATABASE_DSN'],
+                             user=app.config['DATABASE_USER'],
+                             password=app.config['DATABASE_PASSWORD'])
+    cursor = conn.cursor()
+
+    # Execute your query
+    cursor.execute(""" 
+        SELECT SDO_UTIL.TO_GEOJSON(g.location) AS geojson, e.element_id, e.name, e.type, e.details
+            FROM GAME_ELEMENTS e
+            JOIN GEOMETRIES g ON e.geometry_id = g.geometry_id
+            WHERE SDO_WITHIN_DISTANCE(
+            g.location, 
+            (SELECT current_location FROM PLAYERS WHERE player_id = 2), 
+            'distance=300 unit=METER') = 'TRUE'
+    """)
+
+    # Construct GeoJSON features including the DESCRIPTION
+    geojson_features = []
+    for row in cursor:
+        geojson, element_id, name, type, details = row
+        feature = {
+            'type': 'Feature',
+            'geometry': json.loads(geojson.read() if geojson else '{}'),
+            'properties': {
+                'Element ID': element_id,
+                'Name': name,
+                'Type': type,
+                'Details': details
+            }
+        }
+        geojson_features.append(feature)
+
+    geojson_collection = {
+        'type': 'FeatureCollection',
+        'features': geojson_features
+    }
+
+    cursor.close()
+    conn.close()
+
+    return geojson_collection
+@app.route('/300m_search')
+def search_300m():
+    geojson_data = fetch_300m_search()
+    return Response(json.dumps(geojson_data), mimetype='application/json')
+
+##300m Buffer
+
+
+## update location
 @app.route('/update-location', methods=['POST'])
 def update_location():
     data = request.json
@@ -266,12 +363,14 @@ def update_location():
             cursor.close()
         if conn:
             conn.close()
-
+## update location
+            
+## render html
 @app.route('/')
 def home():
     # Render the index.html file
     return render_template('index.html')
-
+## render html
 
 if __name__ == '__main__':
     app.run(port=50003, debug=True)

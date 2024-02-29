@@ -241,8 +241,8 @@
                 });
         }
         
-                // Nearest Polygon Distance
-            function FetchPolygonDistance() {
+        //Polygon Distance
+        function FetchPolygonDistance() {
             fetch('/polygon_distance')
                 .then(response => response.json())
                 .then(data => {
@@ -254,7 +254,36 @@
                         }
                     }).addTo(map);
                 });
-            }
+        }
+
+        //Polygon Area
+        function FetchPolygonArea() {
+            fetch('/polygon_area')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                });
+        }
+        //300m Buffer
+        function Fetch300mSearch() {
+            fetch('/300m_search')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                });
+        }
 
 
     // Add event listener to the button
@@ -262,6 +291,8 @@
     document.getElementById('LoadGeomtries').addEventListener('click', Loadallgeometries)
     document.getElementById('NearestPolygon').addEventListener('click', fetchAndPlotNearestPolygon) 
     document.getElementById('PolygonDistance').addEventListener('click', FetchPolygonDistance) 
+    document.getElementById('PolygonArea').addEventListener('click', FetchPolygonArea) 
+    document.getElementById('Within300m').addEventListener('click', Fetch300mSearch) 
 
     document.getElementById('updateLocationButton').addEventListener('click', function() {
     if (typeof lastlat === 'undefined' || typeof lastlng === 'undefined') {
