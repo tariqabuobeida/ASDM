@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        #map { height: 90vh; } /* Adjusted height to allow space for the button */
+        #loadButton,#enterButton,#moveButton,#shit,
+        #collectButton,#getpath{
+            width: 10%;
+            padding: 10px;
+            text-align: center;
+            background-color: #f8f9fa;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            float:left;
+        }
+
+
+        #collected-items-container {
+            border: 1px solid #ccc;
+            width: 200px;
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        #collected-items-title {
+            border-bottom: 1px solid #ccc;
+            padding: 5px;
+            margin-bottom: 5px;
+        }
+
+        #collected-items-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #collected-items-list li {
+            border-bottom: 1px solid #eee;
+            padding: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #collected-items-list li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="loadButton">Load all Data</div>
+    <div id="enterButton">Enter Puzzle</div>
+    <div id="moveButton">MOVE</div>
+    <div id="collectButton">COLLECT</div>
+    <div id="getpath">GET PATH</div>
+    <div id="shit">shit</div>
+    
+
+    <!-- 创建用于存储收集物品的容器 -->
+    <div id="collected-items-container">
+        <!-- 添加 "Collected Items" 标题 -->
+        <h2 id="collected-items-title">Collected Items</h2>
+        <!-- 列表 -->
+        <ul id="collected-items-list">
+            <!-- 这里将动态添加收集的物品项 -->
+        </ul>
+    </div>
+    
+    <script>
+
+        var map = L.map('map').setView([55.9533, -3.1883], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data © OpenStreetMap contributors'
+        }).addTo(map);
+
+        var pathLayerGroup = L.layerGroup();  // 创建一个图层组，用于存储路径
+        var puzzleLayerGroup= L.layerGroup();
+
+        // Function to load and display GeoJSON data
+        function loadGeoJson() {
+            fetch('/geojson')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                });
+        }
+        
+        function Collectitems() {
+            fetch('/collected_items')
+                .then(response => response.json())
+                .then(data => {
+                    // 确保 data 是对象且包含 game_elements 属性
+                    if (typeof data === 'object' && data.hasOwnProperty('game_elements')) {
+                        // 获取 game_elements 数组
+                        const gameElements = data['game_elements'];
+
+                        // 获取容器元素
+                        const container = document.getElementById('collected-items-container');
+
+                        // 清空容器内容
+                        container.innerHTML = '';
+
+                        // 使用 forEach 迭代 game_elements 数组
+                        gameElements.forEach((item, index) => {
+                            // 创建列表项元素
+                            const listItem = document.createElement('div');
+
+                            // 添加序号栏
+                            listItem.innerHTML = `<span>${index + 1}. </span>`;
+
+                            // 添加 name 和 details
+                            listItem.innerHTML += `<strong>${item[0]}</strong>: ${item[1]}`;
+
+                            // 将列表项添加到容器
+                            container.appendChild(listItem);
+                        });
+                    } else if (data.hasOwnProperty('message')) {
+                        // 处理服务器返回的消息
+                        const message = data['message'];
+                        const container = document.getElementById('collected-items-container');
+                        container.innerHTML = `<p>${message}</p>`;
+                    } else {
+                        console.error('Invalid data format:', data);
+                    }
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        
+        // Function to clear markers with 'updated-marker' class
+        function clearUpdatedMarkers() {
+            map.eachLayer(function (layer) {
+                if (layer instanceof L.Marker && layer.feature && layer.feature.properties && layer.feature.properties.markerClass === 'updated-marker') {
+                    map.removeLayer(layer);
+                }
+            });
+        }
+        
+        var moveClickCount = 1;  // 初始点击次数为1
+        // Function to move based on click count
+        function Move() {
+            // 如果点击次数已经达到12，则不执行 move 操作
+            if (moveClickCount > 13) {
+                console.log("No more move operations.");
+                return;
+            }
+
+            // 清除具有 'updated-marker' 类的标记
+            clearUpdatedMarkers();
+            
+
+            // 构建请求的 move 类型
+            var moveId;
+            if (moveClickCount === 1) {
+                moveId = 11;
+            } else if (moveClickCount === 2) {
+                moveId = 12;
+            } else if (moveClickCount === 3) {
+                moveId = 13;
+            } else if (moveClickCount === 4) {
+                moveId = 21;
+            } else if (moveClickCount === 5) {
+                moveId = 22;
+            } else if (moveClickCount === 6) {
+                moveId = 23;
+            } else if (moveClickCount === 7) {
+                moveId = 24;
+            } else if (moveClickCount === 8) {
+                moveId = 32;
+            } else if (moveClickCount === 9) {
+                moveId = 31;
+            } else if (moveClickCount === 10) {
+                moveId = 33;
+            } else if (moveClickCount === 11) {
+                moveId = 41;
+            } else if (moveClickCount === 12) {
+                moveId = 43;
+            } else if (moveClickCount === 13) {
+                moveId = 42;
+            }
+
+            // 发起请求获取 move 数据
+            fetch(`/move/${moveId}`)
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                    // 更新点击次数
+                    moveClickCount++;
+                })
+                .catch(error => console.error('Error fetching or processing data:', error));
+        }
+
+        var puzzleClickCount = 1;  // 初始点击次数为1
+        // Function to load and display puzzle data based on click count
+        function loadPuzzle() {
+            // 如果点击次数已经达到4，则不执行操作
+            if (puzzleClickCount > 4) {
+                console.log("No more puzzle operations.");
+                return;
+            }
+
+            // 先清空图层组中的路径
+            pathLayerGroup.clearLayers();
+            puzzleLayerGroup.clearLayers();
+            // 清除已有标记
+            clearUpdatedMarkers();
+
+            // 发起请求获取 puzzle 数据
+            fetch(`/enterPuzzle/${puzzleClickCount}/marker`)
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(puzzleLayerGroup);
+
+                    // If click count is greater than 1, also load polygon data
+                    if (puzzleClickCount > 1) {
+                        fetch(`/enterPuzzle/${puzzleClickCount}/polygon`)
+                            .then(response => response.json())
+                            .then(polygonData => {
+                                L.geoJson(polygonData, {
+                                    onEachFeature: function (feature, layer) {
+                                        if (feature.properties) {
+                                            layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                                        }
+                                    }
+                                }).addTo(puzzleLayerGroup);
+                            })
+                            .catch(error => console.error('Error fetching or processing polygon data:', error));
+                    }
+
+                    // Fetch clue data
+                    fetch(`/enterPuzzle/${puzzleClickCount}/clue`)
+                        .then(response => response.json())
+                        .then(clueData => {
+                            // Process clue data and add to the map or layer group as needed
+                            // For example, you can use L.geoJson or other methods based on your data structure
+                            // This is a placeholder, modify as per your actual data structure
+                            L.geoJson(clueData, {
+                                onEachFeature: function (feature, layer) {
+                                    if (feature.properties) {
+                                        layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                                    }
+                                }
+                            }).addTo(puzzleLayerGroup);
+                        })
+                        .catch(error => console.error('Error fetching or processing clue data:', error));
+
+                    puzzleLayerGroup.addTo(map);
+                    // 更新点击次数
+                    puzzleClickCount++;
+                })
+                .catch(error => console.error('Error fetching or processing marker data:', error));
+        }
+
+        var clickCount = 1;  // 初始点击次数为1
+        function loadPaths() {
+            // 如果点击次数大于12，则不执行加载路径的操作
+            if (clickCount > 13) {
+                console.log("No more paths to load.");
+                return;
+            }
+
+            // 先清空图层组中的路径
+            pathLayerGroup.clearLayers();
+
+            // 构建请求的路径类型
+            var pathIds;
+            if (clickCount === 1) {
+                pathIds = [101, 102, 103];
+            } else if (clickCount === 2) {
+                pathIds = [112, 113];
+            } else if (clickCount === 3) {
+                pathIds = [123];
+            } else if (clickCount === 4) {
+                pathIds = [201];
+            } else if (clickCount === 5) {
+                pathIds = [212];
+            } else if (clickCount === 6) {
+                pathIds = [223];
+            } else if (clickCount === 7) {
+                pathIds = [234];
+            } else if (clickCount === 8) {
+                pathIds = [301, 302, 303];
+            } else if (clickCount === 9) {
+                pathIds = [321, 323];
+            } else if (clickCount === 10) {
+                pathIds = [313];
+            } else if (clickCount === 11) {
+                pathIds = [401, 402, 403];
+            } else if (clickCount === 12) {
+                pathIds = [412, 413];
+            } else if (clickCount === 13) {
+                pathIds = [432];
+            }
+
+            // 发起请求获取新的路径数据
+            Promise.all(pathIds.map(pathId => fetch(`/path/${pathId}`).then(response => response.json())))
+                .then(dataArray => {
+                    // 将新的路径数据添加到图层组中
+                    dataArray.forEach(data => {
+                        L.geoJson(data, {
+                            onEachFeature: function (feature, layer) {
+                                if (feature.properties) {
+                                    layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                                }
+                            }
+                        }).addTo(pathLayerGroup);
+                    });
+
+                    // 将图层组添加到地图上
+                    pathLayerGroup.addTo(map);
+
+                    // 更新点击次数
+                    clickCount++;
+                })
+                .catch(error => console.error('Error fetching or processing data:', error));
+        }
+
+
+        // Function to load and display GeoJSON data
+        function shit() {
+            fetch('/shit')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                });
+        }
+
+        // Add event listener to the button
+        document.getElementById('loadButton').addEventListener('click', loadGeoJson);
+        document.getElementById('enterButton').addEventListener('click', loadPuzzle);
+        document.getElementById('moveButton').addEventListener('click',Move);
+        document.getElementById('collectButton').addEventListener('click', Collectitems);
+        document.getElementById('getpath').addEventListener('click', loadPaths);
+        document.getElementById('shit').addEventListener('click', shit);
+
+    </script>
+</body>
+</html>
