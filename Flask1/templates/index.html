@@ -42,7 +42,7 @@
             cursor: pointer;
         }
         #map {
-            height: 100vh;
+            height: 80vh;
             width: calc(100% - 250px);
             float: right;
             opacity: 0; /* Start invisible */
@@ -50,14 +50,14 @@
         }
         #sideColumn {
             width: 250px;
-            height: 80vh;
+            height: 100vh;
             float: left;
             background-color: #737171; /* Side panel color */
-            padding: 10px;
+            padding: 20px 10px;
             box-sizing: border-box;
             opacity: 0;
             transition: opacity 2s ease;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: Arial, Helvetica, sans-serif;
         }
         #navigationTitle {
             font-weight: bold;
@@ -66,6 +66,7 @@
             margin-top: 5px;
             margin-bottom: 20px; /* Add some space below the title */
             text-align: center; /* Center the title */
+            color: #000000
         }
         /* Style for buttons */
         #sideColumn button {
@@ -73,30 +74,20 @@
             width: 100%; /* Full width of the container */
             margin-bottom: 10px; /* Space between buttons */
             padding: 10px; /* Larger padding for bigger buttons */
-            font-size: 1.2em; /* Larger font size for visibility */
             cursor: pointer; /* Change cursor on hover */
             text-align: center; /* Center text */
-            font-family: Consolas, monospace; /* Monospace font for uniformity */
-            font-size: 1em; /* Adjust based on preference */
+            font-family: Arial, Helvetica, sans-serif; /* Monospace font for uniformity */
+            font-size: 14px; /* Adjust based on preference */
             transition: background-color 0.3s, color 0.3s, border-color 0.3s; /* Smooth transition for the hover effect */
         }
         #sideColumn button:hover {
             background-color: transparent; /* Background becomes transparent */
             color: #ffffff; /* Text color changes to black */
             border-color: rgb(255, 255, 255); /* Border color changes to black */
+            font-weight: bold;
         }  
+        
         #inventory {
-            width: 250px; /* Match the width of the side panel */
-            height: 20vh; /* Adjust as needed */
-            background-color: #cfcdcd; /* Inventory color */
-            padding: 10px;
-            box-sizing: border-box;
-            float: left;
-            opacity: 0;
-            transition: opacity 2s ease;
-        }
-    /*
-        #details {
             height: 20vh; 
             width: calc(100% - 250px); 
             background-color: #e0dcdc; 
@@ -106,7 +97,45 @@
             opacity: 0;
             transition: opacity 2s ease;
         }
-    */
+        
+        #inventoryTitle {
+            font-weight: bold;
+            font-size: 20px;
+            text-decoration: underline;
+            margin-top: 5px;
+            margin-bottom: 15px; /* Add some space below the title */
+            text-align: center; /* Center the title */
+            color: #000000; /* Text color is black */
+            font-family: Arial, Helvetica, sans-serif
+        }
+
+        .section {
+            cursor: pointer;
+            padding: 30px;
+            margin-bottom: 5px; /* Space between sections */
+            color: white; /* Text color */
+            text-align: center; /* Center text */
+            font-size: 18px;
+        }
+
+        #newPolygon { background-color: #5f77ba; } /* Example color */
+        #buffers { background-color: #5f77ba; }
+        #collectItems { background-color: #5f77ba; }
+        #solutionsAndItems { background-color: #5f77ba; }
+        #endingTheGame { background-color: #5f77ba; }
+
+        .buttonGroup {
+            display: none; /* Initially hidden */
+            text-align: center; /* Center text */
+            width: 100%; /* Full width of the container */
+        }
+
+        .buttonGroup button {
+            display: block;
+            width: 100%; /* Adjust based on preference */
+            margin: 10px 5px auto; /* Center buttons with some margin */
+        }
+
     </style>
 </head>
 <body>
@@ -117,24 +146,54 @@
     <span class="close" onclick="closeTitleScreen()">X</span>
 </div> -->
 
-
 <div id="sideColumn">
-    <!-- Functionality buttons will be placed here -->
-    <h4 id="navigationTitle">Navigation</h4>
-    <!-- Example buttons -->
+    <h4 id="navigationTitle">NAVIGATION</h4>
+    <!-- Non-Sectioned Buttons -->
     <button id="updateLocationButton">UPDATE LOCATION</button>
-    <button id="EnterNewArea">ENTER NEW AREA</button>
-    <button>COLLECT ITEM</button>
-    <button>MOVE</button>
-    <button>LOG INTERACTION</button>
-    <button id="NearestPolygon">NEAREST POLYGON</button>
-    <button id="PolygonDistance">POLYGON DISTANCE</button>
+    <button id="clearMapBtn">CLEAR MAP</button>
     <button id="LoadGeomtries">LOAD ALL GEOMETRIES</button>
-    <button id="FindItem">FIND ITEM</button>
-    <button id="Within300m">300m SEARCH</button>
-    <button id="PolygonArea">CALCULATE AREA</button>
-    <button id="clearMapBtn">Clear Map</button>
-    <button id="BufferSuspects">Buffer Suspects 40m</button>
+    
+    <!-- Section 1: NEW POLYGON -->
+    <div class="section" data-section="newPolygon">NEW POLYGON</div>
+    <div class="buttonGroup" id="newPolygon">
+        <button id="EnterNewArea">ENTER NEW AREA</button>
+        <button id="NearestPolygon">NEAREST POLYGON</button>
+        <button id="PolygonDistance">DISTANCE TO POLYGONS</button>
+        <button id="PolygonArea">CALCULATE AREA</button>
+        <button>MOVE</button>
+    </div>
+    
+    <!-- Section 2: BUFFERS -->
+    <div class="section" data-section="buffers">BUFFERS AND SEARCH</div>
+    <div class="buttonGroup" id="buffers">
+        <button id="BufferSuspects400">BUFFER: 400m, Suspects</button>
+        <button id="BufferSuspects40">BUFFER: 40m, Suspects</button>
+        <button id="Within200m">200m ITEM SEARCH</button>
+        <button id="FindItem100m">FIND ITEM WITHIN 100M</button>
+        <button id="NearestPoint">FIND NEAREST POINT</button>
+    </div>
+    
+    <!-- Section 3: COLLECT ITEMS -->
+    <div class="section" data-section="collectItems">COLLECT ITEMS</div>
+    <div class="buttonGroup" id="collectItems">
+        <button>LOG INTERACTION</button>
+        <button>COLLECT ITEM</button>
+    </div>
+    
+    <!-- Section 4: SOLUTIONS AND ITEMS -->
+    <div class="section" data-section="solutionsAndItems">SOLUTIONS AND ITEMS</div>
+    <div class="buttonGroup" id="solutionsAndItems">
+        <button id= "Puzzle2Solutioon">PUZZLE 2 SOLUTION AREA</button>
+        <button id= "Puzzle3Solutioon">PUZZLE 3 SOLUTION AREA</button>
+    </div>
+    
+    <!-- Section 5: ENDING THE GAME -->
+    <div class="section" data-section="endingTheGame">ENDING THE GAME</div>
+    <div class="buttonGroup" id="endingTheGame">
+        <button  id="FindCulprit">FIND THE CULPRIT</button>
+        <button id="EnterPolygon4">ENTER POLYGON 4</button>
+    </div>
+</div>
 
     <!-- Add more buttons as needed -->
 </div>
@@ -142,14 +201,8 @@
 
 <div id="map"></div>
 
-
 <div id="inventory">
-    <!-- Inventory content will be placed here -->
-</div>
-
-
-<div id="details">
-    <!-- Details of GameElements will be displayed here -->
+    <h5 id="inventoryTitle"> GAME INVENTORY</h5>
 </div>
 
 
@@ -281,9 +334,10 @@
                     }).addTo(dynamicLayers);
                 });
         }
-        //300m Buffer
-        function Fetch300mSearch() {
-            fetch('/300m_search')
+        
+        //200m Items Search
+        function Fetch200mSearch() {
+            fetch('/200m_search')
                 .then(response => response.json())
                 .then(data => {
                     L.geoJson(data, {
@@ -295,6 +349,22 @@
                     }).addTo(dynamicLayers);
                 });
         }
+
+            //Suspect 400m Buffer
+            function Fetch400msusbuf() {
+            fetch('/400m_susbuf')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(dynamicLayers);
+                });
+        }
+
 
             //Suspect 40m Buffer
             function Fetch40msusbuf() {
@@ -311,14 +381,114 @@
                 });
         }
 
+            //Nearest Item
+            function FetchNearestPoint() {
+            fetch('/nearest_point')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(dynamicLayers);
+                });
+        }
+            
+            // Puzzle 2 Solution
+            function FetchPuzzle2Solution() {
+            fetch('/puzzle2_solution')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(dynamicLayers);
+                });
+        }
+
+            // Puzzle 3 Solution
+            function FetchPuzzle3Solution() {
+            fetch('/puzzle3_solution')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(dynamicLayers);
+                });
+        }
+
+
+            // Enter Polygon 4
+            function FetchEnterPolygon4() {
+            fetch('/enter_polygon4')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(dynamicLayers);
+                });
+        }
+
+            // Find Item 100m
+            function FetchFindItem100m() {
+            fetch('/find_item100m')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(dynamicLayers);
+                });
+        }
+
+
+            // Find the culprit
+            function FetchFindCulprit() {
+            fetch('/find_culprit')
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(dynamicLayers);
+                });
+        }
+
+        
     // Add event listener to the button
     document.getElementById('EnterNewArea').addEventListener('click', FetchEnterNewArea) 
     document.getElementById('LoadGeomtries').addEventListener('click', Loadallgeometries)
     document.getElementById('NearestPolygon').addEventListener('click', fetchAndPlotNearestPolygon) 
     document.getElementById('PolygonDistance').addEventListener('click', FetchPolygonDistance) 
     document.getElementById('PolygonArea').addEventListener('click', FetchPolygonArea) 
-    document.getElementById('Within300m').addEventListener('click', Fetch300mSearch)
-    document.getElementById('BufferSuspects').addEventListener('click', Fetch40msusbuf) 
+    document.getElementById('Within200m').addEventListener('click', Fetch200mSearch)
+    document.getElementById('BufferSuspects400').addEventListener('click', Fetch400msusbuf) 
+    document.getElementById('BufferSuspects40').addEventListener('click', Fetch40msusbuf) 
+    document.getElementById('NearestPoint').addEventListener('click', FetchNearestPoint) 
+    document.getElementById('Puzzle2Solutioon').addEventListener('click', FetchPuzzle2Solution) 
+    document.getElementById('Puzzle3Solutioon').addEventListener('click', FetchPuzzle3Solution) 
+    document.getElementById('EnterPolygon4').addEventListener('click', FetchEnterPolygon4)
+    document.getElementById('FindItem100m').addEventListener('click', FetchFindItem100m)
+    document.getElementById('FindCulprit').addEventListener('click', FetchFindCulprit)
 
     document.getElementById('updateLocationButton').addEventListener('click', function() {
     if (typeof lastlat === 'undefined' || typeof lastlng === 'undefined') {
@@ -361,8 +531,27 @@
         document.getElementById('map').style.opacity = 1; // Trigger the fade-in for the map
         document.getElementById('sideColumn').style.opacity = 1; // Trigger the fade-in for the side column
         document.getElementById('inventory').style.opacity = 1; // Trigger the fade-in for the inventory
-        document.getElementById('details').style.opacity = 1; // Trigger the fade-in for the details
+        // document.getElementById('details').style.opacity = 1; // Trigger the fade-in for the details
     // }
+
+    document.addEventListener('DOMContentLoaded', function() {
+    var sections = document.querySelectorAll('.section');
+
+    sections.forEach(function(section) {
+        section.addEventListener('click', function() {
+            var sectionId = this.getAttribute('data-section');
+            var buttonGroup = document.getElementById(sectionId);
+
+            // Toggle visibility
+            if (buttonGroup.style.display === 'none' || buttonGroup.style.display === '') {
+                buttonGroup.style.display = 'block';
+            } else {
+                buttonGroup.style.display = 'none';
+            }
+        });
+    });
+});
+
 </script>
 
 
