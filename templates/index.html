@@ -50,7 +50,7 @@
         }
         #sideColumn {
             width: 250px;
-            height: 100vh;
+            height: 100%;
             float: left;
             background-color: #737171; /* Side panel color */
             padding: 20px 10px;
@@ -96,6 +96,7 @@
             float: right;
             opacity: 0;
             transition: opacity 2s ease;
+            position: relative; /* 添加这行以设置为相对定位 */
         }
         
         #inventoryTitle {
@@ -109,6 +110,34 @@
             font-family: Arial, Helvetica, sans-serif
         }
 
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 将区域分成3列 */
+            gap: 0; /* 移除间隔 */
+            position: absolute; /* 添加这行以设置为绝对定位 */
+            bottom: 0; /* 添加这行以将底部与大框平齐 */
+            left: 0; /* 添加这行以保证左对齐 */
+            right: 0; /* 添加这行以保证右对齐 */
+            padding: 10px; /* 添加这行以设置内边距 */
+        }
+
+        .grid-item {
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-sizing: border-box; /* 添加这行以包括边框在内的盒模型 */
+        }
+
+        .grid-item h6 {
+            font-size: 16px; /* 根据需要调整字体大小 */
+            margin: 5px 0; /* 调整上下边距 */
+            text-align: center; /* 居中 */
+        }
+
+        .grid-item p {
+            font-size: 14px; /* 根据需要调整字体大小 */
+            margin: 5px 0; /* 调整上下边距 */
+        }
+
         .section {
             cursor: pointer;
             padding: 30px;
@@ -120,7 +149,7 @@
 
         #newPolygon { background-color: #5f77ba; } /* Example color */
         #buffers { background-color: #5f77ba; }
-        #collectItems { background-color: #5f77ba; }
+        #playordered { background-color: #5f77ba; }
         #solutionsAndItems { background-color: #5f77ba; }
         #endingTheGame { background-color: #5f77ba; }
 
@@ -141,10 +170,10 @@
 <body>
 
 
-<!-- <div id="titleScreen">
+<div id="titleScreen">
     <h3>Shadows Among Scholars: The Peculiar Case of Bruce Gittings</h3>
     <span class="close" onclick="closeTitleScreen()">X</span>
-</div> -->
+</div>
 
 <div id="sideColumn">
     <h4 id="navigationTitle">NAVIGATION</h4>
@@ -173,18 +202,13 @@
         <button id="NearestPoint">FIND NEAREST POINT</button>
     </div>
     
-    <!-- Section 3: COLLECT ITEMS -->
-    <div class="section" data-section="collectItems">COLLECT ITEMS</div>
-    <div class="buttonGroup" id="collectItems">
-        <button>LOG INTERACTION</button>
-        <button>COLLECT ITEM</button>
-    </div>
+
     
     <!-- Section 4: SOLUTIONS AND ITEMS -->
     <div class="section" data-section="solutionsAndItems">SOLUTIONS AND ITEMS</div>
     <div class="buttonGroup" id="solutionsAndItems">
-        <button id= "Puzzle2Solutioon">PUZZLE 2 SOLUTION AREA</button>
-        <button id= "Puzzle3Solutioon">PUZZLE 3 SOLUTION AREA</button>
+        <button id= "Puzzle2Solution">PUZZLE 2 SOLUTION AREA</button>
+        <button id= "Puzzle3Solution">PUZZLE 3 SOLUTION AREA</button>
     </div>
     
     <!-- Section 5: ENDING THE GAME -->
@@ -193,9 +217,21 @@
         <button  id="FindCulprit">FIND THE CULPRIT</button>
         <button id="EnterPolygon4">ENTER POLYGON 4</button>
     </div>
-</div>
 
-    <!-- Add more buttons as needed -->
+    <!-- Section 3: Play Ordered -->
+    <div class="section" data-section="playordered">Play Game in Order</div>
+    <div class="buttonGroup" id="playordered">
+        <button id="enterButton">Enter Puzzle</button>
+        <button id="getpath">GET PATH</button>
+        <button id="moveButton">MOVE</button>
+        <button id="collectButton">COLLECT ITEM</button>
+        <button id= "Puzzle2Solutioon">PUZZLE 2 SOLUTION AREA</button>
+        <button id= "Puzzle3Solutioon">PUZZLE 3 SOLUTION AREA</button>
+    </div>   
+</div>
+   
+
+    </div>
 </div>
 
 
@@ -203,6 +239,7 @@
 
 <div id="inventory">
     <h5 id="inventoryTitle"> GAME INVENTORY</h5>
+    <div id="grid-container"></div>
 </div>
 
 
@@ -223,7 +260,7 @@
             // Initialize a draggable marker and add it to the map
         var myCustomIcon = L.icon({
                 iconUrl: '/static/data/icon.png',  // Update the path to your PNG image
-                iconSize: [30, 40], // Size of the icon, adjust according to your image dimensions
+                iconSize: [30, 40] // Size of the icon, adjust according to your image dimensions
                 // iconAnchor: [12, 95], // Point of the icon which will correspond to marker's location
                 // popupAnchor: [-3, -76] // Point from which the popup should open relative to the iconAnchor
         });
@@ -234,6 +271,19 @@
         
         var geojsonFilePath = '/static/data/boundary.geojson';
         var boundaryLayer; // Add this global variable
+
+        //create layer for path and puzzle
+        var pathLayerGroup = L.layerGroup();  
+        var puzzleLayerGroup= L.layerGroup();
+
+        //initialise the click count
+        var moveClickCount = 1;
+        var puzzleClickCount = 1;
+        var pathClickCount = 1;
+
+
+
+
 
         // Then, modify the fetch call for the boundary layer
         fetch(geojsonFilePath)
@@ -261,6 +311,249 @@
         }); 
         
     // });
+
+
+
+
+        // Function to clear markers with 'updated-marker' class
+        function clearUpdatedMarkers() {
+            map.eachLayer(function (layer) {
+                if (layer instanceof L.Marker && layer.feature && layer.feature.properties && layer.feature.properties.markerClass === 'updated-marker') {
+                    map.removeLayer(layer);
+                }
+            });
+        }
+
+        // Function to move based on click count
+        function Move() {
+            // 如果点击次数已经达到12，则不执行 move 操作
+            if (moveClickCount > 13) {
+                console.log("No more move operations.");
+                return;
+            }
+
+            // 清除具有 'updated-marker' 类的标记
+            clearUpdatedMarkers();
+            
+
+            // 构建请求的 move 类型
+            var moveId;
+            if (moveClickCount === 1) {
+                moveId = 11;
+            } else if (moveClickCount === 2) {
+                moveId = 12;
+            } else if (moveClickCount === 3) {
+                moveId = 13;
+            } else if (moveClickCount === 4) {
+                moveId = 21;
+            } else if (moveClickCount === 5) {
+                moveId = 22;
+            } else if (moveClickCount === 6) {
+                moveId = 23;
+            } else if (moveClickCount === 7) {
+                moveId = 24;
+            } else if (moveClickCount === 8) {
+                moveId = 32;
+            } else if (moveClickCount === 9) {
+                moveId = 31;
+            } else if (moveClickCount === 10) {
+                moveId = 33;
+            } else if (moveClickCount === 11) {
+                moveId = 41;
+            } else if (moveClickCount === 12) {
+                moveId = 43;
+            } else if (moveClickCount === 13) {
+                moveId = 42;
+            }
+
+            // 发起请求获取 move 数据
+            fetch(`/move/${moveId}`)
+                .then(response => response.json())
+                .then(data => {
+                    L.geoJson(data, {
+                        pointToLayer: function (feature, latlng) {
+                            return L.marker(latlng, { icon: myCustomIcon });
+                        },
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(map);
+                    // 更新点击次数
+                    moveClickCount++;
+                })
+                .catch(error => console.error('Error fetching or processing data:', error));
+        }
+
+        // Function to load and display puzzle data based on click count
+        function loadPuzzle() {
+            // 如果点击次数已经达到4，则不执行操作
+            if (puzzleClickCount > 4) {
+                console.log("No more puzzle operations.");
+                return;
+            }
+
+            // 先清空图层组中的路径
+            pathLayerGroup.clearLayers();
+            puzzleLayerGroup.clearLayers();
+            // 清除已有标记
+            clearUpdatedMarkers();
+
+            // 发起请求获取 puzzle marker 数据
+            fetch(`/enterPuzzle/${puzzleClickCount}/marker`)
+                .then(response => response.json())
+                .then(markerData => {
+                    L.geoJson(markerData, {
+                        pointToLayer: function (feature, latlng) {
+                            return L.marker(latlng, { icon: myCustomIcon });
+                        },
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                            }
+                        }
+                    }).addTo(puzzleLayerGroup);
+
+                    // 发起请求获取 puzzle polygon 数据
+                    fetch(`/enterPuzzle/${puzzleClickCount}/polygon`)
+                        .then(response => response.json())
+                        .then(polygonData => {
+                            L.geoJson(polygonData, {
+                                onEachFeature: function (feature, layer) {
+                                    if (feature.properties) {
+                                        layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                                    }
+                                }
+                            }).addTo(puzzleLayerGroup);
+
+                            // 发起请求获取 puzzle clue 数据
+                            fetch(`/enterPuzzle/${puzzleClickCount}/clue`)
+                                .then(response => response.json())
+                                .then(clueData => {
+                                    L.geoJson(clueData, {
+                                        onEachFeature: function (feature, layer) {
+                                            if (feature.properties) {
+                                                layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                                            }
+                                        }
+                                    }).addTo(puzzleLayerGroup);
+                                })
+                                .catch(error => console.error('Error fetching or processing clue data:', error));
+
+                            puzzleLayerGroup.addTo(map);
+                            // 更新点击次数
+                            puzzleClickCount++;
+                        })
+                        .catch(error => console.error('Error fetching or processing polygon data:', error));
+                })
+                .catch(error => console.error('Error fetching or processing marker data:', error));
+        }
+
+
+        // Function to get path data based on click count
+        function loadPaths() {
+            // 如果点击次数大于12，则不执行加载路径的操作
+            if (pathClickCount > 13) {
+                console.log("No more paths to load.");
+                return;
+            }
+
+            // 先清空图层组中的路径
+            pathLayerGroup.clearLayers();
+
+            // 构建请求的路径类型
+            var pathIds;
+            if (pathClickCount === 1) {
+                pathIds = [101, 102, 103];
+            } else if (pathClickCount=== 2) {
+                pathIds = [112, 113];
+            } else if (pathClickCount === 3) {
+                pathIds = [123];
+            } else if (pathClickCount === 4) {
+                pathIds = [201];
+            } else if (pathClickCount === 5) {
+                pathIds = [212];
+            } else if (pathClickCount === 6) {
+                pathIds = [223];
+            } else if (pathClickCount === 7) {
+                pathIds = [234];
+            } else if (pathClickCount === 8) {
+                pathIds = [301, 302, 303];
+            } else if (pathClickCount === 9) {
+                pathIds = [321, 323];
+            } else if (pathClickCount === 10) {
+                pathIds = [313];
+            } else if (pathClickCount === 11) {
+                pathIds = [401, 402, 403];
+            } else if (pathClickCount === 12) {
+                pathIds = [412, 413];
+            } else if (pathClickCount === 13) {
+                pathIds = [432];
+            }
+
+            // 发起请求获取新的路径数据
+            Promise.all(pathIds.map(pathId => fetch(`/path/${pathId}`).then(response => response.json())))
+                .then(dataArray => {
+                    // 将新的路径数据添加到图层组中
+                    dataArray.forEach(data => {
+                        L.geoJson(data, {
+                            onEachFeature: function (feature, layer) {
+                                if (feature.properties) {
+                                    layer.bindPopup(Object.keys(feature.properties).map(key => `${key}: ${feature.properties[key]}`).join('<br />'));
+                                }
+                            }
+                        }).addTo(pathLayerGroup);
+                    });
+
+                    // 将图层组添加到地图上
+                    pathLayerGroup.addTo(map);
+
+                    // 更新点击次数
+                    pathClickCount++;
+                })
+                .catch(error => console.error('Error fetching or processing data:', error));
+        }
+
+
+        //collect items
+        function Collectitems() {
+            fetch('/collected_items')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.hasOwnProperty('game_elements')) {
+                        const gameElements = data['game_elements'];
+                        const gridContainer = document.getElementById('grid-container');
+
+                        gridContainer.innerHTML = ''; // 清空原有内容
+
+                        gameElements.forEach(item => {
+                            const gridItem = document.createElement('div');
+                            gridItem.className = 'grid-item';
+
+                            const title = document.createElement('h6');
+                            title.textContent = item[0];
+                            gridItem.appendChild(title);
+
+                            const text = document.createElement('p');
+                            text.textContent = item[1];
+                            gridItem.appendChild(text);
+
+                            gridContainer.appendChild(gridItem);
+                        });
+                    } else {
+                        console.error('Invalid data format:', data);
+                    }
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+
+
+
+
+
+
         // Enter New Area Funtion
         function FetchEnterNewArea() {
             fetch('/enter_new_area')
@@ -475,6 +768,11 @@
 
         
     // Add event listener to the button
+    document.getElementById('enterButton').addEventListener('click', loadPuzzle);
+    document.getElementById('moveButton').addEventListener('click',Move);
+    document.getElementById('getpath').addEventListener('click', loadPaths);
+    document.getElementById('collectButton').addEventListener('click', Collectitems);
+
     document.getElementById('EnterNewArea').addEventListener('click', FetchEnterNewArea) 
     document.getElementById('LoadGeomtries').addEventListener('click', Loadallgeometries)
     document.getElementById('NearestPolygon').addEventListener('click', fetchAndPlotNearestPolygon) 
@@ -484,6 +782,8 @@
     document.getElementById('BufferSuspects400').addEventListener('click', Fetch400msusbuf) 
     document.getElementById('BufferSuspects40').addEventListener('click', Fetch40msusbuf) 
     document.getElementById('NearestPoint').addEventListener('click', FetchNearestPoint) 
+    document.getElementById('Puzzle2Solution').addEventListener('click', FetchPuzzle2Solution) 
+    document.getElementById('Puzzle3Solution').addEventListener('click', FetchPuzzle3Solution) 
     document.getElementById('Puzzle2Solutioon').addEventListener('click', FetchPuzzle2Solution) 
     document.getElementById('Puzzle3Solutioon').addEventListener('click', FetchPuzzle3Solution) 
     document.getElementById('EnterPolygon4').addEventListener('click', FetchEnterPolygon4)
@@ -526,13 +826,13 @@
 
 
     // Function to close the title screen and fade in the map, side column, inventory, and details
-    // function closeTitleScreen() {
-        // document.getElementById('titleScreen').style.display = 'none';
+    function closeTitleScreen() {
+        document.getElementById('titleScreen').style.display = 'none';
         document.getElementById('map').style.opacity = 1; // Trigger the fade-in for the map
         document.getElementById('sideColumn').style.opacity = 1; // Trigger the fade-in for the side column
         document.getElementById('inventory').style.opacity = 1; // Trigger the fade-in for the inventory
-        // document.getElementById('details').style.opacity = 1; // Trigger the fade-in for the details
-    // }
+        document.getElementById('details').style.opacity = 1; // Trigger the fade-in for the details
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
     var sections = document.querySelectorAll('.section');
